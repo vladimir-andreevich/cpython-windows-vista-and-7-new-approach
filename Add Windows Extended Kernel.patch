@@ -1,5 +1,17 @@
+diff --git a/Python-3.12.10/PCbuild/pylauncher.vcxproj b/Python-3.12.10/PCbuild/pylauncher.vcxproj
+index 35f2f7e..1d92651 100644
+--- a/Python-3.12.10/PCbuild/pylauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/pylauncher.vcxproj
+@@ -87,6 +87,7 @@
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+     <Import Project="pyproject.props" />
++	<Import Project="..\PC\windows-extended-kernel\windows_extended_kernel.props" />
+   </ImportGroup>
+   <PropertyGroup Label="UserMacros" />
+   <ItemDefinitionGroup>
 diff --git a/Python-3.12.10/PCbuild/pythoncore.vcxproj b/Python-3.12.10/PCbuild/pythoncore.vcxproj
-index b265264..6b8a5f9 100644
+index b265264..033f188 100644
 --- a/Python-3.12.10/PCbuild/pythoncore.vcxproj
 +++ b/Python-3.12.10/PCbuild/pythoncore.vcxproj
 @@ -88,6 +88,7 @@
@@ -10,3 +22,24 @@ index b265264..6b8a5f9 100644
    </ImportGroup>
    <PropertyGroup Label="UserMacros" />
    <PropertyGroup>
+@@ -102,7 +103,7 @@
+       <AdditionalOptions>/Zm200  %(AdditionalOptions)</AdditionalOptions>
+       <AdditionalIncludeDirectories>$(PySourcePath)Modules\_hacl\include;$(PySourcePath)Modules\_hacl\internal;$(PySourcePath)Python;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+       <AdditionalIncludeDirectories Condition="$(IncludeExternals)">$(zlibDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+-      <PreprocessorDefinitions>_USRDLL;Py_BUILD_CORE;Py_BUILD_CORE_BUILTIN;Py_ENABLE_SHARED;MS_DLL_ID="$(SysWinVer)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
++      <PreprocessorDefinitions>_WIN32_WINNT=0x0603;WINVER=0x0603;NTDDI_VERSION=0x06030000;_USRDLL;Py_BUILD_CORE;Py_BUILD_CORE_BUILTIN;Py_ENABLE_SHARED;MS_DLL_ID="$(SysWinVer)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <PreprocessorDefinitions Condition="$(IncludeExternals)">_Py_HAVE_ZLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+     </ClCompile>
+     <Link>
+diff --git a/Python-3.12.10/PCbuild/pywlauncher.vcxproj b/Python-3.12.10/PCbuild/pywlauncher.vcxproj
+index e50b69a..296776a 100644
+--- a/Python-3.12.10/PCbuild/pywlauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/pywlauncher.vcxproj
+@@ -87,6 +87,7 @@
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+     <Import Project="pyproject.props" />
++	<Import Project="..\PC\windows-extended-kernel\windows_extended_kernel.props" />
+   </ImportGroup>
+   <PropertyGroup Label="UserMacros" />
+   <ItemDefinitionGroup>

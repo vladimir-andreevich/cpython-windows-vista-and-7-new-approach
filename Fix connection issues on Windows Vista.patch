@@ -1,0 +1,318 @@
+diff --git a/Python-3.12.10/Modules/socketmodule.c b/Python-3.12.10/Modules/socketmodule.c
+index 27afd73..25df137 100644
+--- a/Python-3.12.10/Modules/socketmodule.c
++++ b/Python-3.12.10/Modules/socketmodule.c
+@@ -644,7 +644,7 @@ select_error(void)
+ #  define GET_SOCK_ERROR WSAGetLastError()
+ #  define SET_SOCK_ERROR(err) WSASetLastError(err)
+ #  define SOCK_TIMEOUT_ERR WSAEWOULDBLOCK
+-#  define SOCK_INPROGRESS_ERR WSAEWOULDBLOCK
++#  define IS_WSA_INPROGRESS(err) ((err) == WSAEWOULDBLOCK || (err) == WSAEINPROGRESS)
+ #else
+ #  define GET_SOCK_ERROR errno
+ #  define SET_SOCK_ERROR(err) do { errno = err; } while (0)
+@@ -658,6 +658,252 @@ select_error(void)
+ #  define SUPPRESS_DEPRECATED_CALL
+ #endif
+ 
++#ifdef MS_WINDOWS
++
++/* Buggy Layered Service Providers (LSPs) behave improperly after a failed 
++   WSASocketW attempt, even if the next call succeeds. Since the system always 
++   rejects the flag with WSAEINVAL or WSAEPROTOTYPE or WSAEOPNOTSUPP, the most 
++   defensive move is to probe once and never pass the flag again in this process. */
++static BOOL wsa_no_handle_inherit_supported = TRUE;
++static int bypass_lsp = -1; // -1: unknown; 0: do not bypass; 1: bypass
++
++/* Case-insensitive equality of a slice [begin, end) with a NUL-terminated literal. */
++static BOOL 
++equal_slice(const wchar_t *begin, const wchar_t *end, const wchar_t *literal) 
++{
++    const wchar_t *p = begin;
++    const wchar_t *q = literal;
++    while (p < end && *q) {
++        if (towlower(*p) != towlower(*q)) {
++            return FALSE;
++        } else {
++            ++p; ++q;
++        }
++    }
++    /* Return TRUE if both ended at the same time. */
++    return (BOOL)((p == end) && (*q == L'\0'));
++}
++
++/* Interprets a process environment variable as a boolean "on/off" switch. 
++   Handles inline assignments in the command prompt. 
++   Returns TRUE for "1" or "true" (case-insensitive). 
++   Otherwise, returns FALSE. */
++static BOOL 
++environment_enabled(const wchar_t *name) 
++{
++    const wchar_t *v = _wgetenv(name);
++    if (!v) 
++        return FALSE;
++    
++    /* Trim leading spaces. */
++    while (*v && iswspace(*v)) {
++        v++;
++    }
++    
++    /* Trim trailing spaces. */
++    const wchar_t *end = v + wcslen(v);
++    while (end > v && iswspace(end[-1])) {
++        --end;
++    }
++
++    if (v == end) return FALSE;                    // empty value -> off
++    if (equal_slice(v, end, L"1")) return TRUE;    // "1" -> on
++    if (equal_slice(v, end, L"true")) return TRUE; // "true" -> on
++    return FALSE;                                  // everything else (incl. "0") -> off
++}
++
++/* Ensures a newly created SOCKET handle is non-inheritable so child processes 
++   do not inherit it. This mirrors the effect of WSA_FLAG_NO_HANDLE_INHERIT 
++   when that flag is unavailable or rejected by the provider. 
++   INVALID_SOCKET is returned unchanged. */
++static SOCKET_T 
++make_non_inheritable(SOCKET_T fd) 
++{
++    if (fd == INVALID_SOCKET) 
++        return fd;
++
++    if (!SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0)) {
++        DWORD windows_error = GetLastError();  // save immediately
++        // PySys_WriteStderr("[_socket] SetHandleInformation (clear inherit) failed: error %lu\n",
++        //         (unsigned long)windows_error);
++        PyErr_SetFromWindowsErr((int)windows_error);
++        closesocket(fd); // may change windows_error
++        return INVALID_SOCKET;
++    } else {
++        // PySys_WriteStderr("[_socket] The handle is successfully marked to be non-inheritable.\n");
++        return fd;
++    }
++}
++
++/*
++   It might happen that user- or vendor-installed Layered Service Providers (LSPs) leave 
++   sockets in a broken state after a failed WSASocketW call. Creating the socket from 
++   an explicit base provider skips LSPs in the stack entirely. This avoids misbehaving 
++   LSPs while preserving the semantics of overlapped sockets that CPython expects.
++   
++   Parameters
++    family  : Address family (e.g., AF_INET, AF_INET6).
++    type    : Socket type (e.g., SOCK_STREAM, SOCK_DGRAM).
++    protocol: Protocol number. Pass 0 to accept the provider's default for the
++              specified (family, type).
++    try_noinherit_flag :
++              TRUE => include WSA_FLAG_NO_HANDLE_INHERIT in the WSASocketW call. 
++              If the provider rejects the flag with a known "unsupported flag" error, 
++              the function retries once without the flag.
++*/
++static SOCKET_T
++create_socket_from_base_provider(int family, int type, int protocol, BOOL try_noinherit_flag)
++{
++    /* Enumerate installed Winsock providers for this process. */
++    DWORD len = 0;
++    int number_of_protocols = WSAEnumProtocolsW(NULL, NULL, &len);
++    if (number_of_protocols != SOCKET_ERROR) {;
++        if (WSAGetLastError() != WSAENOBUFS) {
++            return INVALID_SOCKET;
++        }
++    }
++    /* Allocate and fill the buffer for WSAPROTOCOL_INFOW entries. */
++    WSAPROTOCOL_INFOW *buffer = (WSAPROTOCOL_INFOW *)PyMem_RawMalloc(len);
++    if (!buffer) {
++        WSASetLastError(WSAENOBUFS);
++        return INVALID_SOCKET;
++    } else {
++        number_of_protocols = WSAEnumProtocolsW(NULL, buffer, &len);
++        if (number_of_protocols == SOCKET_ERROR) {
++            PyMem_RawFree(buffer);
++            return INVALID_SOCKET;
++        }
++    }
++
++    SOCKET_T fd = INVALID_SOCKET;
++    for (int i = 0; i < number_of_protocols; i++) {
++        WSAPROTOCOL_INFOW *protocol_info = &buffer[i];
++
++        /* Accept only base providers and bypass Layered Service Providers! */
++        if (protocol_info->ProtocolChain.ChainLen != 1) 
++            continue;
++
++        /* Match the requested family and type. */
++        if (protocol_info->iAddressFamily != family) 
++            continue;
++        if (protocol_info->iSocketType != type) 
++            continue;
++        
++        // https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket
++        /* If protocol == 0, accept any iProtocol the base provider chooses to use 
++           for this family and type. Otherwise, require an exact protocol match. */
++        if (protocol != 0 && protocol_info->iProtocol != protocol) 
++            continue;
++
++        /* The first attempt: create from this exact provider. */
++        DWORD flags = WSA_FLAG_OVERLAPPED;
++        if (try_noinherit_flag)
++            flags |= WSA_FLAG_NO_HANDLE_INHERIT;
++
++        Py_BEGIN_ALLOW_THREADS
++        fd = WSASocketW(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
++                        protocol_info, 0, flags);
++        Py_END_ALLOW_THREADS
++
++        if (fd != INVALID_SOCKET) {
++            PySys_WriteStderr("[_socket] WSASocketW from the base provider is successfully created (flags=%lu).\n", 
++                (unsigned long)flags);
++            break;
++        }
++
++        /* If the first attempt failed and we asked for NO_HANDLE_INHERIT, it may 
++        be reported as unsupported using WSAEINVAL or WSAEPROTOTYPE or WSAEOPNOTSUPP. 
++        In that case, retry exactly once without the flag. */
++        if ((flags & WSA_FLAG_NO_HANDLE_INHERIT) != 0) {
++            int error = WSAGetLastError();
++            if (error == WSAEINVAL || error == WSAEPROTOTYPE || error == WSAEOPNOTSUPP) {
++                Py_BEGIN_ALLOW_THREADS
++                fd = WSASocketW(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
++                                protocol_info, 0, WSA_FLAG_OVERLAPPED);
++                Py_END_ALLOW_THREADS
++
++                if (fd != INVALID_SOCKET) {
++                    PySys_WriteStderr("[_socket] WSASocketW from the base provider is successfully created (flags=%lu).\n", 
++                        (unsigned long)flags);
++                    break;
++                }
++            }
++        }
++        /* Otherwise, keep scanning providers... */
++    }
++
++    PyMem_RawFree(buffer);
++    return fd;
++}
++
++/* Creates a non-inheritable Windows socket. */
++static SOCKET_T
++Py_WSASocketW_NoInherit(int family, int type, int proto)
++{
++    SOCKET_T fd = INVALID_SOCKET;
++    BOOL wsa_socket_called = FALSE;
++    if (bypass_lsp == -1) {
++        bypass_lsp = (int)environment_enabled(L"PY_WSASOCKET_BYPASS_LSP");
++    }
++    
++    if (bypass_lsp == 1) {
++        PySys_WriteStderr("[_socket] Bypassing Layered Service Providers...\n");
++        fd = create_socket_from_base_provider(family, type, proto, 0);
++        if (fd != INVALID_SOCKET) {
++            fd = make_non_inheritable(fd);
++            return fd;
++        } else {
++            PySys_WriteStderr("[_socket] Bypassing Layered Service Providers failed.\n");
++        }
++    }
++
++    /* Ask the operating system to make the handle non-inheritable. */
++    if (wsa_no_handle_inherit_supported) { // protection against poor behaviour of LSPs
++        Py_BEGIN_ALLOW_THREADS
++        fd = WSASocketW(family, type, proto, NULL, 0,
++                        WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT);
++        Py_END_ALLOW_THREADS
++
++        wsa_socket_called = TRUE;
++        if (fd != INVALID_SOCKET) { // success
++            return fd;
++        } else { // failure
++            wsa_no_handle_inherit_supported = FALSE;
++        }
++    }
++    if (wsa_socket_called) {
++        // Probably, failure due to missing support of WSA_FLAG_NO_HANDLE_INHERIT.
++        // Capture the reason what exactly failed.
++        int first_error = WSAGetLastError();
++        if (first_error == WSAEINVAL || first_error == WSAEPROTOTYPE || first_error == WSAEOPNOTSUPP) {
++            // PySys_WriteStderr("[_socket] WSASocketW does not support WSA_FLAG_NO_HANDLE_INHERIT: error %d\n", first_error);
++            // continue execution
++        } else {
++            /* Not an "unsupported flag" situation; keep original behavior. */
++            // PySys_WriteStderr("[_socket] WSASocketW(NO_HANDLE_INHERIT) failed: error %d\n", first_error);
++            PyErr_SetFromWindowsErr(first_error);
++            return fd;
++        }
++    }
++    
++    /* Fallback to the classic socket(). */
++    // https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-socket
++    Py_BEGIN_ALLOW_THREADS
++    fd = socket(family, type, proto);
++    Py_END_ALLOW_THREADS
++
++    if (fd == INVALID_SOCKET) {
++        int second_error = WSAGetLastError();
++        // PySys_WriteStderr("[_socket] socket() also failed: error %d\n", second_error);
++        PyErr_SetFromWindowsErr(second_error);
++        return fd;
++    }
++    
++    /* Force the handle to be non-inheritable. */
++    return make_non_inheritable(fd);
++}
++#endif /* MS_WINDOWS */
++
+ /* Convenience function to raise an error according to errno
+    and return a NULL pointer from a function. */
+ 
+@@ -3495,8 +3741,13 @@ internal_connect(PySocketSockObject *s, struct sockaddr *addr, int addrlen,
+         wait_connect = (s->sock_timeout != 0 && IS_SELECTABLE(s));
+     }
+     else {
+-        wait_connect = (s->sock_timeout > 0 && err == SOCK_INPROGRESS_ERR
+-                        && IS_SELECTABLE(s));
++#ifdef MS_WINDOWS
++        /* On Windows, a non-blocking connect yields WSAEWOULDBLOCK (10035) or WSAEINPROGRESS (10036) 
++        with timeouts. Treat this as "in progress" and wait. */
++        wait_connect = (s->sock_timeout > 0 && IS_WSA_INPROGRESS(err) && IS_SELECTABLE(s));
++#else
++        wait_connect = (s->sock_timeout > 0 && err == SOCK_INPROGRESS_ERR && IS_SELECTABLE(s));
++#endif
+     }
+ 
+     if (!wait_connect) {
+@@ -5550,11 +5801,7 @@ sock_initobj_impl(PySocketSockObject *self, int family, int type, int proto,
+             proto = 0;
+         }
+ #ifdef MS_WINDOWS
+-        Py_BEGIN_ALLOW_THREADS
+-        fd = WSASocketW(family, type, proto,
+-                        NULL, 0,
+-                        WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT);
+-        Py_END_ALLOW_THREADS
++        fd = Py_WSASocketW_NoInherit(family, type, proto);
+ 
+         if (fd == INVALID_SOCKET) {
+             set_error();
+diff --git a/Python-3.12.10/Modules/socketmodule.h b/Python-3.12.10/Modules/socketmodule.h
+index f5ca004..96355fb 100644
+--- a/Python-3.12.10/Modules/socketmodule.h
++++ b/Python-3.12.10/Modules/socketmodule.h
+@@ -12,6 +12,18 @@
+ 
+ #else /* MS_WINDOWS */
+ # include <winsock2.h>
++# include <wchar.h>
++# include <wctype.h>   // iswspace, towlower
++
++// https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-sethandleinformation
++#ifndef HANDLE_FLAG_INHERIT
++#define HANDLE_FLAG_INHERIT 0x00000001
++#endif
++
++// https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasocketa
++#ifndef WSA_FLAG_NO_HANDLE_INHERIT
++#define WSA_FLAG_NO_HANDLE_INHERIT 0x80
++#endif
+ 
+ /*
+  * If Windows has bluetooth support, include bluetooth constants.
