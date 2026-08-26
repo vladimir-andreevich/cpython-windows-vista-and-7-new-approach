@@ -1,0 +1,84 @@
+diff --git a/Python-3.12.10/Tools/msi/bundle/packagegroups/postinstall.wxs b/Python-3.12.10/Tools/msi/bundle/packagegroups/postinstall.wxs
+index 64f42dd..f5e3d72 100644
+--- a/Python-3.12.10/Tools/msi/bundle/packagegroups/postinstall.wxs
++++ b/Python-3.12.10/Tools/msi/bundle/packagegroups/postinstall.wxs
+@@ -52,7 +52,9 @@
+                         Permanent="yes"
+                         PerMachine="yes"
+                         Vital="no"
+-                        InstallCondition="InstallAllUsers and CompileAll and not LauncherOnly" />
++                        InstallCondition="InstallAllUsers and CompileAll and not LauncherOnly">
++                <Payload Id="payload_compileall_AllUsers" SourceFile="api-ms-win-core-path-l1-1-0.dll" Compressed="yes" />
++            </ExePackage>
+             <ExePackage Id="compileallO_AllUsers"
+                         SourceFile="py.exe"
+                         Compressed="yes"
+@@ -62,7 +64,9 @@
+                         Permanent="yes"
+                         PerMachine="yes"
+                         Vital="no"
+-                        InstallCondition="InstallAllUsers and CompileAll and not LauncherOnly" />
++                        InstallCondition="InstallAllUsers and CompileAll and not LauncherOnly">
++                <Payload Id="payload_compileallO_AllUsers" SourceFile="api-ms-win-core-path-l1-1-0.dll" Compressed="yes" />
++            </ExePackage>
+             <ExePackage Id="compileallOO_AllUsers"
+                         SourceFile="py.exe"
+                         Compressed="yes"
+@@ -72,7 +76,9 @@
+                         Permanent="yes"
+                         PerMachine="yes"
+                         Vital="no"
+-                        InstallCondition="InstallAllUsers and CompileAll and not LauncherOnly" />
++                        InstallCondition="InstallAllUsers and CompileAll and not LauncherOnly">
++                <Payload Id="payload_compileallOO_AllUsers" SourceFile="api-ms-win-core-path-l1-1-0.dll" Compressed="yes" />
++            </ExePackage>
+ 
+             <ExePackage Id="compileall_JustForMe"
+                         SourceFile="py.exe"
+@@ -83,7 +89,9 @@
+                         Permanent="yes"
+                         PerMachine="no"
+                         Vital="no"
+-                        InstallCondition="not InstallAllUsers and CompileAll and not LauncherOnly" />
++                        InstallCondition="not InstallAllUsers and CompileAll and not LauncherOnly">
++                <Payload Id="payload_compileall_JustForMe" SourceFile="api-ms-win-core-path-l1-1-0.dll" Compressed="yes" />
++            </ExePackage>
+             <ExePackage Id="compileallO_JustForMe"
+                         SourceFile="py.exe"
+                         Compressed="yes"
+@@ -93,7 +101,9 @@
+                         Permanent="yes"
+                         PerMachine="no"
+                         Vital="no"
+-                        InstallCondition="not InstallAllUsers and CompileAll and not LauncherOnly" />
++                        InstallCondition="not InstallAllUsers and CompileAll and not LauncherOnly">
++                <Payload Id="payload_compileallO_JustForMe" SourceFile="api-ms-win-core-path-l1-1-0.dll" Compressed="yes" />
++            </ExePackage>
+             <ExePackage Id="compileallOO_JustForMe"
+                         SourceFile="py.exe"
+                         Compressed="yes"
+@@ -103,7 +113,9 @@
+                         Permanent="yes"
+                         PerMachine="no"
+                         Vital="no"
+-                        InstallCondition="not InstallAllUsers and CompileAll and not LauncherOnly" />
++                        InstallCondition="not InstallAllUsers and CompileAll and not LauncherOnly">
++                <Payload Id="payload_compileallOO_JustForMe" SourceFile="api-ms-win-core-path-l1-1-0.dll" Compressed="yes" />
++            </ExePackage>
+         </PackageGroup>
+     </Fragment>
+ </Wix>
+diff --git a/Python-3.12.10/Tools/msi/launcher/launcher_files.wxs b/Python-3.12.10/Tools/msi/launcher/launcher_files.wxs
+index d9a230e..927a6c7 100644
+--- a/Python-3.12.10/Tools/msi/launcher/launcher_files.wxs
++++ b/Python-3.12.10/Tools/msi/launcher/launcher_files.wxs
+@@ -9,6 +9,9 @@
+             <Component Id="pyw.exe" Directory="LauncherInstallDirectory" Guid="{8E52B8CD-48BB-4D74-84CD-6238BCD11F20}">
+                 <File Id="pyw.exe" Name="pyw.exe" Source="pyw.exe" KeyPath="yes" />
+             </Component>
++            <Component Id="api_ms_win_core_path_l1_1_0.dll" Directory="LauncherInstallDirectory" Guid="{7BADFF1C-D76A-4F9B-A955-09E6EC1614B7}">
++                <File Id="api_ms_win_core_path_l1_1_0.dll" Name="api-ms-win-core-path-l1-1-0.dll" Source="api-ms-win-core-path-l1-1-0.dll" KeyPath="yes" />
++            </Component>
+ 
+             <Component Id="launcher_path_cu" Directory="LauncherInstallDirectory" Guid="{95AEB930-367C-475C-A17E-A89BFCD4C670}">
+                 <Condition>NOT ALLUSERS=1</Condition>

@@ -1,0 +1,299 @@
+diff --git a/Python-3.12.10/Tools/msi/appendpath/appendpath.wxs b/Python-3.12.10/Tools/msi/appendpath/appendpath.wxs
+index bba186c..b1b2ac0 100644
+--- a/Python-3.12.10/Tools/msi/appendpath/appendpath.wxs
++++ b/Python-3.12.10/Tools/msi/appendpath/appendpath.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         
+         <PropertyRef Id="DetectTargetDir" />
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/core/core.wxs b/Python-3.12.10/Tools/msi/core/core.wxs
+index 21a8bcd..0f59dc8 100644
+--- a/Python-3.12.10/Tools/msi/core/core.wxs
++++ b/Python-3.12.10/Tools/msi/core/core.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/core/core_d.wxs b/Python-3.12.10/Tools/msi/core/core_d.wxs
+index 1cee097..50d0521 100644
+--- a/Python-3.12.10/Tools/msi/core/core_d.wxs
++++ b/Python-3.12.10/Tools/msi/core/core_d.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title_d)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/core/core_pdb.wxs b/Python-3.12.10/Tools/msi/core/core_pdb.wxs
+index 1fe7d1e..33522b5 100644
+--- a/Python-3.12.10/Tools/msi/core/core_pdb.wxs
++++ b/Python-3.12.10/Tools/msi/core/core_pdb.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.TitlePdb)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/dev/dev.wxs b/Python-3.12.10/Tools/msi/dev/dev.wxs
+index 15a0836..ed755a0 100644
+--- a/Python-3.12.10/Tools/msi/dev/dev.wxs
++++ b/Python-3.12.10/Tools/msi/dev/dev.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="DetectTargetDir" />
+diff --git a/Python-3.12.10/Tools/msi/dev/dev_d.wxs b/Python-3.12.10/Tools/msi/dev/dev_d.wxs
+index 20bf9ee..18a969c 100644
+--- a/Python-3.12.10/Tools/msi/dev/dev_d.wxs
++++ b/Python-3.12.10/Tools/msi/dev/dev_d.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title_d)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/doc/doc.wxs b/Python-3.12.10/Tools/msi/doc/doc.wxs
+index 49798c7..becee41 100644
+--- a/Python-3.12.10/Tools/msi/doc/doc.wxs
++++ b/Python-3.12.10/Tools/msi/doc/doc.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="DetectTargetDir" />
+diff --git a/Python-3.12.10/Tools/msi/exe/exe.wxs b/Python-3.12.10/Tools/msi/exe/exe.wxs
+index 05a8d77..c086367 100644
+--- a/Python-3.12.10/Tools/msi/exe/exe.wxs
++++ b/Python-3.12.10/Tools/msi/exe/exe.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+ 
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/exe/exe_d.wxs b/Python-3.12.10/Tools/msi/exe/exe_d.wxs
+index 3b327bc..56d922a 100644
+--- a/Python-3.12.10/Tools/msi/exe/exe_d.wxs
++++ b/Python-3.12.10/Tools/msi/exe/exe_d.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title_d)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/exe/exe_pdb.wxs b/Python-3.12.10/Tools/msi/exe/exe_pdb.wxs
+index f706cf3..56ab60a 100644
+--- a/Python-3.12.10/Tools/msi/exe/exe_pdb.wxs
++++ b/Python-3.12.10/Tools/msi/exe/exe_pdb.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.TitlePdb)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/launcher/launcher.wxs b/Python-3.12.10/Tools/msi/launcher/launcher.wxs
+index 49f1f7b..a57da57 100644
+--- a/Python-3.12.10/Tools/msi/launcher/launcher.wxs
++++ b/Python-3.12.10/Tools/msi/launcher/launcher.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+ 
+         <Property Id="Suppress_TARGETDIR_Check" Value="1" />
+diff --git a/Python-3.12.10/Tools/msi/lib/lib.wxs b/Python-3.12.10/Tools/msi/lib/lib.wxs
+index e417e31..45199e9 100644
+--- a/Python-3.12.10/Tools/msi/lib/lib.wxs
++++ b/Python-3.12.10/Tools/msi/lib/lib.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="DetectTargetDir" />
+diff --git a/Python-3.12.10/Tools/msi/lib/lib_d.wxs b/Python-3.12.10/Tools/msi/lib/lib_d.wxs
+index 7968d17..a09d0ee 100644
+--- a/Python-3.12.10/Tools/msi/lib/lib_d.wxs
++++ b/Python-3.12.10/Tools/msi/lib/lib_d.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title_d)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/lib/lib_pdb.wxs b/Python-3.12.10/Tools/msi/lib/lib_pdb.wxs
+index 7918893..327e7ea 100644
+--- a/Python-3.12.10/Tools/msi/lib/lib_pdb.wxs
++++ b/Python-3.12.10/Tools/msi/lib/lib_pdb.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.TitlePdb)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/path/path.wxs b/Python-3.12.10/Tools/msi/path/path.wxs
+index 3285439..c9cfaa8 100644
+--- a/Python-3.12.10/Tools/msi/path/path.wxs
++++ b/Python-3.12.10/Tools/msi/path/path.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+ 
+         <PropertyRef Id="DetectTargetDir" />
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/pip/pip.wxs b/Python-3.12.10/Tools/msi/pip/pip.wxs
+index 627c471..bb47070 100644
+--- a/Python-3.12.10/Tools/msi/pip/pip.wxs
++++ b/Python-3.12.10/Tools/msi/pip/pip.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         
+         <PropertyRef Id="UpgradeTable" />
+         <PropertyRef Id="REGISTRYKEY" />
+diff --git a/Python-3.12.10/Tools/msi/tcltk/tcltk.wxs b/Python-3.12.10/Tools/msi/tcltk/tcltk.wxs
+index bad56d5..d531c86 100644
+--- a/Python-3.12.10/Tools/msi/tcltk/tcltk.wxs
++++ b/Python-3.12.10/Tools/msi/tcltk/tcltk.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="DetectTargetDir" />
+diff --git a/Python-3.12.10/Tools/msi/tcltk/tcltk_d.wxs b/Python-3.12.10/Tools/msi/tcltk/tcltk_d.wxs
+index 38aacd9..4deca76 100644
+--- a/Python-3.12.10/Tools/msi/tcltk/tcltk_d.wxs
++++ b/Python-3.12.10/Tools/msi/tcltk/tcltk_d.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title_d)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/tcltk/tcltk_pdb.wxs b/Python-3.12.10/Tools/msi/tcltk/tcltk_pdb.wxs
+index 55f2091..e3c2627 100644
+--- a/Python-3.12.10/Tools/msi/tcltk/tcltk_pdb.wxs
++++ b/Python-3.12.10/Tools/msi/tcltk/tcltk_pdb.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.TitlePdb)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/test/test.wxs b/Python-3.12.10/Tools/msi/test/test.wxs
+index 9e497e7..b05c443 100644
+--- a/Python-3.12.10/Tools/msi/test/test.wxs
++++ b/Python-3.12.10/Tools/msi/test/test.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="DetectTargetDir" />
+diff --git a/Python-3.12.10/Tools/msi/test/test_d.wxs b/Python-3.12.10/Tools/msi/test/test_d.wxs
+index 9b26ff6..47139fe 100644
+--- a/Python-3.12.10/Tools/msi/test/test_d.wxs
++++ b/Python-3.12.10/Tools/msi/test/test_d.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title_d)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/test/test_pdb.wxs b/Python-3.12.10/Tools/msi/test/test_pdb.wxs
+index 5a2ef36..dffbedd 100644
+--- a/Python-3.12.10/Tools/msi/test/test_pdb.wxs
++++ b/Python-3.12.10/Tools/msi/test/test_pdb.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.TitlePdb)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="UpgradeTable" />
+diff --git a/Python-3.12.10/Tools/msi/ucrt/ucrt.wxs b/Python-3.12.10/Tools/msi/ucrt/ucrt.wxs
+index e9e2a9a..aa6ebf0 100644
+--- a/Python-3.12.10/Tools/msi/ucrt/ucrt.wxs
++++ b/Python-3.12.10/Tools/msi/ucrt/ucrt.wxs
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="UTF-8"?>
+ <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+     <Product Id="*" Language="!(loc.LCID)" Name="!(loc.Title)" Version="$(var.Version)" Manufacturer="!(loc.Manufacturer)" UpgradeCode="$(var.UpgradeCode)">
+-        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
++        <Package InstallerVersion="405" Compressed="yes" InstallScope="perUser" Platform="$(var.Platform)" />
+         <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+         
+         <PropertyRef Id="DetectTargetDir" />

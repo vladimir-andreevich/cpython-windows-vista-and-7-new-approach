@@ -1,3 +1,27 @@
+diff --git a/Python-3.12.10/PCbuild/_freeze_module.vcxproj b/Python-3.12.10/PCbuild/_freeze_module.vcxproj
+index 3df0a07..57b473c 100644
+--- a/Python-3.12.10/PCbuild/_freeze_module.vcxproj
++++ b/Python-3.12.10/PCbuild/_freeze_module.vcxproj
+@@ -79,6 +79,7 @@
+     <CharacterSet>Unicode</CharacterSet>
+   </PropertyGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
++  <Import Project="..\PC\windows-extended-kernel\windows_extended_kernel.props" />
+   <ImportGroup Label="ExtensionSettings">
+   </ImportGroup>
+   <ImportGroup Label="PropertySheets">
+diff --git a/Python-3.12.10/PCbuild/pylauncher.vcxproj b/Python-3.12.10/PCbuild/pylauncher.vcxproj
+index 35f2f7e..1d92651 100644
+--- a/Python-3.12.10/PCbuild/pylauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/pylauncher.vcxproj
+@@ -87,6 +87,7 @@
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+     <Import Project="pyproject.props" />
++	<Import Project="..\PC\windows-extended-kernel\windows_extended_kernel.props" />
+   </ImportGroup>
+   <PropertyGroup Label="UserMacros" />
+   <ItemDefinitionGroup>
 diff --git a/Python-3.12.10/PCbuild/pythoncore.vcxproj b/Python-3.12.10/PCbuild/pythoncore.vcxproj
 index b265264..6b8a5f9 100644
 --- a/Python-3.12.10/PCbuild/pythoncore.vcxproj
@@ -10,3 +34,15 @@ index b265264..6b8a5f9 100644
    </ImportGroup>
    <PropertyGroup Label="UserMacros" />
    <PropertyGroup>
+diff --git a/Python-3.12.10/PCbuild/pywlauncher.vcxproj b/Python-3.12.10/PCbuild/pywlauncher.vcxproj
+index e50b69a..296776a 100644
+--- a/Python-3.12.10/PCbuild/pywlauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/pywlauncher.vcxproj
+@@ -87,6 +87,7 @@
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+     <Import Project="pyproject.props" />
++	<Import Project="..\PC\windows-extended-kernel\windows_extended_kernel.props" />
+   </ImportGroup>
+   <PropertyGroup Label="UserMacros" />
+   <ItemDefinitionGroup>
