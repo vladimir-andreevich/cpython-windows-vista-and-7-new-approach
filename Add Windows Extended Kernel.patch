@@ -1,0 +1,12 @@
+diff --git a/Python-3.12.10/PCbuild/pythoncore.vcxproj b/Python-3.12.10/PCbuild/pythoncore.vcxproj
+index b265264..6b8a5f9 100644
+--- a/Python-3.12.10/PCbuild/pythoncore.vcxproj
++++ b/Python-3.12.10/PCbuild/pythoncore.vcxproj
+@@ -88,6 +88,7 @@
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+     <Import Project="pyproject.props" />
++    <Import Project="..\PC\windows-extended-kernel\windows_extended_kernel.props" />
+   </ImportGroup>
+   <PropertyGroup Label="UserMacros" />
+   <PropertyGroup>
