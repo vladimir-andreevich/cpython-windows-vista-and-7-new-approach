@@ -1,0 +1,438 @@
+diff --git a/Python-3.12.10/Lib/test/test_launcher.py b/Python-3.12.10/Lib/test/test_launcher.py
+index 8e09e7a..79735e0 100644
+--- a/Python-3.12.10/Lib/test/test_launcher.py
++++ b/Python-3.12.10/Lib/test/test_launcher.py
+@@ -232,7 +232,7 @@ class RunPyMixin:
+             p.stdin.close()
+             p.wait(10)
+             out = p.stdout.read().decode("utf-8", "replace")
+-            err = p.stderr.read().decode("ascii", "replace").replace("\uFFFD", "?")
++            err = p.stderr.read().decode("utf-8", "replace")
+         if p.returncode != expect_returncode and support.verbose and not allow_fail:
+             print("++ COMMAND ++")
+             print([self.py_exe, *args])
+@@ -306,6 +306,24 @@ class TestLauncher(unittest.TestCase, RunPyMixin):
+         self.assertEqual(self.py_exe, Path(data["argv0"]))
+         self.assertEqual(sys.version.partition(" ")[0], data["version"])
+ 
++    def test_version_unicode_path(self):
++        # Exercise the real executable path as well as subsequent debug records.
++        # Include characters outside common Windows ANSI code pages.
++        py_exe = self.get_py_exe()
++        with tempfile.TemporaryDirectory() as tmp:
++            directory = Path(tmp) / "Кириллица 漢字 🐍"
++            directory.mkdir()
++            self.py_exe = directory / py_exe.name
++            try:
++                shutil.copy2(py_exe, self.py_exe)
++                data = self.run_py(["-0"])
++                self.assertEqual(str(self.py_exe), data["argv0"])
++                self.assertEqual(sys.version.partition(" ")[0], data["version"])
++                self.assertEqual("True", data["SearchInfo.list"])
++                self.assertIn(f"argv0: {self.py_exe}", data["stderr"].splitlines())
++            finally:
++                self.py_exe = py_exe
++
+     def test_help_option(self):
+         data = self.run_py(["-h"])
+         self.assertEqual("True", data["SearchInfo.help"])
+diff --git a/Python-3.12.10/PC/launcher.c b/Python-3.12.10/PC/launcher.c
+index dc26553..75919e0 100644
+--- a/Python-3.12.10/PC/launcher.c
++++ b/Python-3.12.10/PC/launcher.c
+@@ -13,6 +13,8 @@
+ #include <stdio.h>
+ #include <tchar.h>
+ 
++#include "launcher_debug.h"
++
+ #define BUFSIZE 256
+ #define MSGSIZE 1024
+ 
+@@ -65,12 +67,30 @@ skip_whitespace(wchar_t * p)
+ static void
+ debug(wchar_t * format, ...)
+ {
+-    va_list va;
++    va_list arguments;
+ 
+     if (log_fp != NULL) {
+-        va_start(va, format);
+-        vfwprintf_s(log_fp, format, va);
+-        va_end(va);
++        va_start(arguments, format);
++        int required_length = _vscwprintf(format, arguments);
++        va_end(arguments);
++        if (required_length <= 0) {
++            return;
++        }
++        wchar_t *buffer = malloc(((size_t)required_length + 1) * sizeof(wchar_t));
++        if (!buffer) {
++            OutputDebugStringW(L"Python launcher: debug allocation failed\n");
++            return;
++        }
++        va_start(arguments, format);
++        int formatted_length = vswprintf_s(buffer, (size_t)required_length + 1, format, arguments);
++        va_end(arguments);
++        if (formatted_length > 0 &&
++            !write_debug(log_fp, buffer, formatted_length)) {
++            /* Do not append further records to a possibly partial write. */
++            OutputDebugStringW(L"Python launcher: debug output failed\n");
++            log_fp = NULL;
++        }
++        free(buffer);
+     }
+ }
+ 
+diff --git a/Python-3.12.10/PC/launcher2.c b/Python-3.12.10/PC/launcher2.c
+index 1d1f3c3..a34f2a9 100644
+--- a/Python-3.12.10/PC/launcher2.c
++++ b/Python-3.12.10/PC/launcher2.c
+@@ -17,6 +17,9 @@
+ #include <stdbool.h>
+ #include <tchar.h>
+ #include <assert.h>
++#include <wctype.h>
++
++#include "launcher_debug.h"
+ 
+ #define MS_WINDOWS
+ #include "patchlevel.h"
+@@ -45,21 +48,24 @@ static FILE * log_fp = NULL;
+ void
+ debug(wchar_t * format, ...)
+ {
+-    va_list va;
++    va_list arguments;
+ 
+     if (log_fp != NULL) {
+         wchar_t buffer[MAXLEN];
+-        int r = 0;
+-        va_start(va, format);
+-        r = vswprintf_s(buffer, MAXLEN, format, va);
+-        va_end(va);
++        va_start(arguments, format);
++        int formatted_length = vswprintf_s(buffer, MAXLEN, format, arguments);
++        va_end(arguments);
+ 
+-        if (r <= 0) {
++        if (formatted_length <= 0) {
+             return;
+         }
+-        fputws(buffer, log_fp);
+-        while (r && isspace(buffer[r])) {
+-            buffer[r--] = L'\0';
++        if (!write_debug(log_fp, buffer, formatted_length)) {
++            /* Do not append further records to a possibly partial write. */
++            OutputDebugStringW(L"Python launcher: debug output failed\n");
++            log_fp = NULL;
++        }
++        while (formatted_length && iswspace(buffer[formatted_length - 1])) {
++            buffer[--formatted_length] = L'\0';
+         }
+         if (buffer[0]) {
+             OutputDebugStringW(buffer);
+diff --git a/Python-3.12.10/PC/launcher_debug.c b/Python-3.12.10/PC/launcher_debug.c
+new file mode 100644
+index 0000000..eaebe0e
+--- /dev/null
++++ b/Python-3.12.10/PC/launcher_debug.c
+@@ -0,0 +1,104 @@
++/* Unicode debug output shared by the two Windows launchers. */
++#include "launcher_debug.h"
++
++#include <io.h>
++#include <limits.h>
++#include <stdlib.h>
++
++BOOL
++write_debug(FILE *stream, const wchar_t *text, int text_length)
++{
++    /* Do not pass wide text through the CRT's locale conversion. Even
++     * _O_U8TEXT can split surrogate pairs when stderr is unbuffered. */
++    if (fflush(stream) == EOF) {
++        return FALSE;
++    }
++    int file_descriptor = _fileno(stream);
++    if (file_descriptor < 0) {
++        return FALSE;
++    }
++    HANDLE output_handle = (HANDLE)_get_osfhandle(file_descriptor);
++    if (output_handle == INVALID_HANDLE_VALUE) {
++        return FALSE;
++    }
++
++    /* Preserve the text stream's LF -> CRLF translation. */
++    int newline_count = 0;
++    for (int source_index = 0; source_index < text_length; ++source_index) {
++        if (text[source_index] == L'\n') {
++            ++newline_count;
++        }
++    }
++    if (text_length > INT_MAX - newline_count) {
++        return FALSE;
++    }
++    int translated_length = text_length + newline_count;
++    wchar_t *translated_text = malloc((size_t)translated_length * sizeof(wchar_t));
++    if (!translated_text) {
++        return FALSE;
++    }
++    int destination_index = 0;
++    for (int source_index = 0; source_index < text_length; ++source_index) {
++        if (text[source_index] == L'\n') {
++            translated_text[destination_index++] = L'\r';
++        }
++        translated_text[destination_index++] = text[source_index];
++    }
++
++    BOOL success = FALSE;
++    DWORD console_mode;
++    if (GetConsoleMode(output_handle, &console_mode)) {
++        DWORD character_offset = 0;
++        while (character_offset < (DWORD)translated_length) {
++            /* Bound console writes, keeping surrogate pairs together. */
++            DWORD chunk_length = (DWORD)translated_length - character_offset;
++            if (chunk_length > 16384) {
++                chunk_length = 16384;
++                wchar_t last_code_unit =
++                    translated_text[character_offset + chunk_length - 1];
++                if (last_code_unit >= 0xD800 && last_code_unit <= 0xDBFF) {
++                    --chunk_length;
++                }
++            }
++            DWORD characters_written;
++            if (!WriteConsoleW(output_handle, translated_text + character_offset,
++                               chunk_length, &characters_written, NULL)
++                || !characters_written) {
++                goto done;
++            }
++            character_offset += characters_written;
++        }
++        success = TRUE;
++    }
++    else {
++        int utf8_length = WideCharToMultiByte(
++            CP_UTF8, 0, translated_text, translated_length, NULL, 0, NULL, NULL);
++        if (!utf8_length) {
++            goto done;
++        }
++        char *utf8_buffer = malloc(utf8_length);
++        if (!utf8_buffer) {
++            goto done;
++        }
++        if (WideCharToMultiByte(
++               CP_UTF8, 0, translated_text, translated_length,
++               utf8_buffer, utf8_length, NULL, NULL
++           ) == utf8_length) {
++            DWORD byte_offset = 0;
++            while (byte_offset < (DWORD)utf8_length) {
++                DWORD bytes_written;
++                if (!WriteFile(output_handle, utf8_buffer + byte_offset,
++                               (DWORD)utf8_length - byte_offset,
++                               &bytes_written, NULL) || !bytes_written) {
++                    break;
++                }
++                byte_offset += bytes_written;
++            }
++            success = byte_offset == (DWORD)utf8_length ? TRUE : FALSE;
++        }
++        free(utf8_buffer);
++    }
++done:
++    free(translated_text);
++    return success;
++}
+diff --git a/Python-3.12.10/PC/launcher_debug.h b/Python-3.12.10/PC/launcher_debug.h
+new file mode 100644
+index 0000000..0d0040c
+--- /dev/null
++++ b/Python-3.12.10/PC/launcher_debug.h
+@@ -0,0 +1,10 @@
++/* Unicode debug output shared by the two Windows launchers. */
++#ifndef Py_LAUNCHER_DEBUG_H
++#define Py_LAUNCHER_DEBUG_H
++
++#include <windows.h>
++#include <stdio.h>
++
++BOOL write_debug(FILE *stream, const wchar_t *text, int text_length);
++
++#endif /* Py_LAUNCHER_DEBUG_H */
+diff --git a/Python-3.12.10/PCbuild/pylauncher.vcxproj b/Python-3.12.10/PCbuild/pylauncher.vcxproj
+index 35f2f7e..e08a7db 100644
+--- a/Python-3.12.10/PCbuild/pylauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/pylauncher.vcxproj
+@@ -101,6 +101,7 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClCompile Include="..\PC\launcher2.c" />
++    <ClCompile Include="..\PC\launcher_debug.c" />
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="..\PC\launcher.ico" />
+@@ -108,6 +109,9 @@
+   <ItemGroup>
+     <ResourceCompile Include="..\PC\pylauncher.rc" />
+   </ItemGroup>
++  <ItemGroup>
++    <ClInclude Include="..\PC\launcher_debug.h" />
++  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+diff --git a/Python-3.12.10/PCbuild/pylauncher.vcxproj.filters b/Python-3.12.10/PCbuild/pylauncher.vcxproj.filters
+index 17d0389..28506eb 100644
+--- a/Python-3.12.10/PCbuild/pylauncher.vcxproj.filters
++++ b/Python-3.12.10/PCbuild/pylauncher.vcxproj.filters
+@@ -11,7 +11,7 @@
+     </Filter>
+   </ItemGroup>
+   <ItemGroup>
+-    <ClCompile Include="..\PC\launcher.c">
++    <ClCompile Include="..\PC\launcher2.c">
+       <Filter>Source Files</Filter>
+     </ClCompile>
+   </ItemGroup>
+@@ -25,4 +25,12 @@
+       <Filter>Resource Files</Filter>
+     </ResourceCompile>
+   </ItemGroup>
++  <ItemGroup>
++    <ClCompile Include="..\PC\launcher_debug.c">
++      <Filter>Source Files</Filter>
++    </ClCompile>
++    <ClInclude Include="..\PC\launcher_debug.h">
++      <Filter>Source Files</Filter>
++    </ClInclude>
++  </ItemGroup>
+ </Project>
+\ No newline at end of file
+diff --git a/Python-3.12.10/PCbuild/pywlauncher.vcxproj b/Python-3.12.10/PCbuild/pywlauncher.vcxproj
+index e50b69a..55f5826 100644
+--- a/Python-3.12.10/PCbuild/pywlauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/pywlauncher.vcxproj
+@@ -101,6 +101,7 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClCompile Include="..\PC\launcher2.c" />
++    <ClCompile Include="..\PC\launcher_debug.c" />
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="..\PC\launcher.ico" />
+@@ -108,6 +109,9 @@
+   <ItemGroup>
+     <ResourceCompile Include="..\PC\pylauncher.rc" />
+   </ItemGroup>
++  <ItemGroup>
++    <ClInclude Include="..\PC\launcher_debug.h" />
++  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+diff --git a/Python-3.12.10/PCbuild/pywlauncher.vcxproj.filters b/Python-3.12.10/PCbuild/pywlauncher.vcxproj.filters
+index 17d0389..28506eb 100644
+--- a/Python-3.12.10/PCbuild/pywlauncher.vcxproj.filters
++++ b/Python-3.12.10/PCbuild/pywlauncher.vcxproj.filters
+@@ -11,7 +11,7 @@
+     </Filter>
+   </ItemGroup>
+   <ItemGroup>
+-    <ClCompile Include="..\PC\launcher.c">
++    <ClCompile Include="..\PC\launcher2.c">
+       <Filter>Source Files</Filter>
+     </ClCompile>
+   </ItemGroup>
+@@ -25,4 +25,12 @@
+       <Filter>Resource Files</Filter>
+     </ResourceCompile>
+   </ItemGroup>
++  <ItemGroup>
++    <ClCompile Include="..\PC\launcher_debug.c">
++      <Filter>Source Files</Filter>
++    </ClCompile>
++    <ClInclude Include="..\PC\launcher_debug.h">
++      <Filter>Source Files</Filter>
++    </ClInclude>
++  </ItemGroup>
+ </Project>
+\ No newline at end of file
+diff --git a/Python-3.12.10/PCbuild/venvlauncher.vcxproj b/Python-3.12.10/PCbuild/venvlauncher.vcxproj
+index 123e84e..d71cafb 100644
+--- a/Python-3.12.10/PCbuild/venvlauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/venvlauncher.vcxproj
+@@ -104,6 +104,7 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClCompile Include="..\PC\launcher.c" />
++    <ClCompile Include="..\PC\launcher_debug.c" />
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="..\PC\launcher.ico" />
+@@ -111,6 +112,9 @@
+   <ItemGroup>
+     <ResourceCompile Include="..\PC\pylauncher.rc" />
+   </ItemGroup>
++  <ItemGroup>
++    <ClInclude Include="..\PC\launcher_debug.h" />
++  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+diff --git a/Python-3.12.10/PCbuild/venvlauncher.vcxproj.filters b/Python-3.12.10/PCbuild/venvlauncher.vcxproj.filters
+index ec13936..26379a9 100644
+--- a/Python-3.12.10/PCbuild/venvlauncher.vcxproj.filters
++++ b/Python-3.12.10/PCbuild/venvlauncher.vcxproj.filters
+@@ -23,4 +23,12 @@
+       <Filter>Source Files</Filter>
+     </ClCompile>
+   </ItemGroup>
++  <ItemGroup>
++    <ClCompile Include="..\PC\launcher_debug.c">
++      <Filter>Source Files</Filter>
++    </ClCompile>
++    <ClInclude Include="..\PC\launcher_debug.h">
++      <Filter>Source Files</Filter>
++    </ClInclude>
++  </ItemGroup>
+ </Project>
+\ No newline at end of file
+diff --git a/Python-3.12.10/PCbuild/venvwlauncher.vcxproj b/Python-3.12.10/PCbuild/venvwlauncher.vcxproj
+index b8504d5..f93161c 100644
+--- a/Python-3.12.10/PCbuild/venvwlauncher.vcxproj
++++ b/Python-3.12.10/PCbuild/venvwlauncher.vcxproj
+@@ -104,6 +104,7 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClCompile Include="..\PC\launcher.c" />
++    <ClCompile Include="..\PC\launcher_debug.c" />
+   </ItemGroup>
+   <ItemGroup>
+     <None Include="..\PC\launcher.ico" />
+@@ -111,6 +112,9 @@
+   <ItemGroup>
+     <ResourceCompile Include="..\PC\pylauncher.rc" />
+   </ItemGroup>
++  <ItemGroup>
++    <ClInclude Include="..\PC\launcher_debug.h" />
++  </ItemGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+diff --git a/Python-3.12.10/PCbuild/venvwlauncher.vcxproj.filters b/Python-3.12.10/PCbuild/venvwlauncher.vcxproj.filters
+index 8addc13..d53fb21 100644
+--- a/Python-3.12.10/PCbuild/venvwlauncher.vcxproj.filters
++++ b/Python-3.12.10/PCbuild/venvwlauncher.vcxproj.filters
+@@ -23,4 +23,12 @@
+       <Filter>Resource Files</Filter>
+     </ResourceCompile>
+   </ItemGroup>
++  <ItemGroup>
++    <ClCompile Include="..\PC\launcher_debug.c">
++      <Filter>Source Files</Filter>
++    </ClCompile>
++    <ClInclude Include="..\PC\launcher_debug.h">
++      <Filter>Source Files</Filter>
++    </ClInclude>
++  </ItemGroup>
+ </Project>
+\ No newline at end of file
